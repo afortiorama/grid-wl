@@ -15,13 +15,6 @@
 #Echo all commands
 set -o xtrace
 
-function die()
-{
-  echo "$1"
-  exit 1
-}
-
-
 #Parameters of this run
 CODE_REMOTE_PATH=$1
 DATA_REMOTE_PATH=$2
@@ -44,38 +37,38 @@ echo OUTPUT_LOCAL_PATH $OUTPUT_LOCAL_PATH
 # Download the software to be run, unzip it, and go into the directory
 
 echo Downloading Code `date`
-dirac-dms-get-file $CODE_REMOTE_PATH 2>&1 || die "Failed to download code from $CODE_REMOTE_PATH"
+dirac-dms-get-file $CODE_REMOTE_PATH 2>&1
 
-tar -xf $CODE_LOCAL_PATH  2>&1 || die "Failed to untar $CODE_LOCAL_PATH"
-ls -l $PWD
-cd im3shape-grid 2>&1
-pwd
+if [ "$?" == "0" ]; then
 
+    tar -xf $CODE_LOCAL_PATH  2>&1
+    ls -l $PWD
+    cd im3shape-grid 2>&1
+    pwd
+else
+    echo "Couldn't untar. Bye Bye."
+fi
 
 echo Downloading data `date`
-dirac-dms-get-file $DATA_REMOTE_PATH  2>&1 || die "Failed to download dat from $DATA_REMOTE_PATH"
+dirac-dms-get-file $DATA_REMOTE_PATH  2>&1
 
 #Move files into dir. For convenience
-mv ../$INI ./ || die "Could not find ini file $INI"
-mv ../$BLACKLIST ./ || die "Could not find blacklist file $BLACKLIST"
+mv ../$INI ./
+mv ../$BLACKLIST ./
 
 #Run the main code - also sets up environment
 echo Running code `date`
 ls -l $PWD
 echo $PWD/run-im3shape $DATA_LOCAL_PATH $INI $CAT $OUTPUT_LOCAL_PATH $JOB_RANK $JOB_COUNT  2>&1
-$PWD/run-im3shape $DATA_LOCAL_PATH $INI $CAT $OUTPUT_LOCAL_PATH $JOB_RANK $JOB_COUNT  2>&1 || die "run-im3shape failed to run"
+$PWD/run-im3shape $DATA_LOCAL_PATH $INI $CAT $OUTPUT_LOCAL_PATH $JOB_RANK $JOB_COUNT  2>&1
 
 echo "DONE - WHAT IS HERE"
 ls -l $PWD
 
 echo Copying back results  `date`
 # Copy results back to SRM. Force copying so we overwrite
-# No point using die here - if it doesn't work we are at the end anyway
-# and we can at least try to get the epoch file if the main one fails.
 dirac-dms-add-file ${OUTPUT_REMOTE_PATH}.main.txt ${OUTPUT_LOCAL_PATH}.main.txt $TARGET_STORAGE 2>&1
 dirac-dms-add-file ${OUTPUT_REMOTE_PATH}.epoch.txt ${OUTPUT_LOCAL_PATH}.epoch.txt $TARGET_STORAGE 2>&1
-
-
 # gfal-copy -f file://$PWD/${OUTPUT_LOCAL_PATH}.main.txt ${OUTPUT_REMOTE_PATH}.main.txt  2>&1
 # gfal-copy -f file://$PWD/${OUTPUT_LOCAL_PATH}.epoch.txt ${OUTPUT_REMOTE_PATH}.epoch.txt  2>&1
 
